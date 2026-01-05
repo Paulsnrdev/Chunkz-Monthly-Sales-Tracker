@@ -453,345 +453,231 @@
     </div>
 
     <script>
-        // Define all clothing items
-        const clothingItems = [
-            'Sweatpant',
-            'Hoodie',
-            'Tanktop',
-            'Croptop',
-            'Tshirt',
-            'Socks',
-            'Trucker Hat',
-            'Sweatshirt',
-            'Polo',
-            'Short',
-            'Jorts/Cargo',
-            'Raglan Shirt'
-        ];
+    // Define all clothing items
+    const clothingItems = [
+        'Sweatpant',
+        'Hoodie',
+        'Tanktop',
+        'Croptop',
+        'Tshirt',
+        'Socks',
+        'Trucker Hat',
+        'Sweatshirt',
+        'Polo',
+        'Short',
+        'Jorts/Cargo',
+        'Raglan Shirt'
+    ];
 
-        // Initialize data structure
-        let salesData = {};
-        let currentDate = new Date().toISOString().split('T')[0];
+    // Initialize data structure
+    let salesData = {};
+    let currentDate = new Date().toISOString().split('T')[0];
 
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            loadData();
-            initializeDatePicker();
-            renderItems();
-            updateSummary();
-        });
-
-        // Initialize date picker
-        function initializeDatePicker() {
-            const datePicker = document.getElementById('datePicker');
-            datePicker.value = currentDate;
-            datePicker.max = currentDate; // Don't allow future dates
-            
-            datePicker.addEventListener('change', function() {
-                currentDate = this.value;
-                updateCurrentDateDisplay();
-                renderItems();
-            });
-            
+    // ===== CORE FUNCTIONS =====
+    function initializeDatePicker() {
+        const datePicker = document.getElementById('datePicker');
+        datePicker.value = currentDate;
+        datePicker.max = currentDate;
+        
+        datePicker.addEventListener('change', function() {
+            currentDate = this.value;
             updateCurrentDateDisplay();
-        }
+            renderItems();
+        });
+        
+        updateCurrentDateDisplay();
+    }
 
-        function updateCurrentDateDisplay() {
-            const date = new Date(currentDate);
-            const options = { year: 'numeric', month: 'long', day: 'numeric' };
-            document.getElementById('currentMonth').textContent = 
-                `Tracking Sales for ${date.toLocaleDateString('en-US', options)}`;
-        }
+    function updateCurrentDateDisplay() {
+        const date = new Date(currentDate);
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('currentMonth').textContent = 
+            'Tracking Sales for ' + date.toLocaleDateString('en-US', options);
+    }
 
-        // Load data from localStorage
-        function loadData() {
-            const savedData = localStorage.getItem('clothingSalesData');
-            if (savedData) {
-                salesData = JSON.parse(savedData);
+    function loadData() {
+        const savedData = localStorage.getItem('clothingSalesData');
+        if (savedData) {
+            salesData = JSON.parse(savedData);
+        }
+    }
+
+    function saveData() {
+        localStorage.setItem('clothingSalesData', JSON.stringify(salesData));
+    }
+
+    function renderItems() {
+        const container = document.getElementById('itemsContainer');
+        container.innerHTML = '';
+        
+        clothingItems.forEach(function(item) {
+            const dailyCount = getDailyCount(item, currentDate);
+            
+            const itemHTML = '<div class="item-card">' +
+                '<div class="item-name">' + item + '</div>' +
+                '<div class="item-controls">' +
+                '<button class="counter-btn remove-btn" onclick="updateCount(\'' + item + '\', -1)">−</button>' +
+                '<div class="count-display" id="count-' + item + '">' + dailyCount + '</div>' +
+                '<button class="counter-btn add-btn" onclick="updateCount(\'' + item + '\', 1)">+</button>' +
+                '</div>' +
+                '<div class="daily-count">Today: ' + dailyCount + ' sold</div>' +
+                '</div>';
+            
+            container.innerHTML += itemHTML;
+        });
+    }
+
+    function updateCount(item, change) {
+        if (!salesData[currentDate]) {
+            salesData[currentDate] = {};
+        }
+        
+        if (!salesData[currentDate][item]) {
+            salesData[currentDate][item] = 0;
+        }
+        
+        const newCount = salesData[currentDate][item] + change;
+        salesData[currentDate][item] = Math.max(0, newCount);
+        
+        document.getElementById('count-' + item).textContent = salesData[currentDate][item];
+        updateSummary();
+        saveData();
+    }
+
+    function getDailyCount(item, date) {
+        if (salesData[date] && salesData[date][item]) {
+            return salesData[date][item];
+        }
+        return 0;
+    }
+
+    function getMonthlyTotal(item) {
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        let total = 0;
+        
+        for (const date in salesData) {
+            const dateObj = new Date(date);
+            if (dateObj.getMonth() === currentMonth && dateObj.getFullYear() === currentYear) {
+                total += salesData[date][item] || 0;
             }
         }
+        
+        return total;
+    }
 
-        // Save data to localStorage
-        function saveData() {
-            localStorage.setItem('clothingSalesData', JSON.stringify(salesData));
-        }
-
-        // Render all items
-        function renderItems() {
-            const container = document.getElementById('itemsContainer');
-            container.innerHTML = '';
-            
-            clothingItems.forEach(item => {
-                const dailyCount = getDailyCount(item, currentDate);
-                
-                const itemHTML = `
-                    <div class="item-card">
-                        <div class="item-name">${item}</div>
-                        <div class="item-controls">
-                            <button class="counter-btn remove-btn" onclick="updateCount('${item}', -1)">−</button>
-                            <div class="count-display" id="count-${item}">${dailyCount}</div>
-                            <button class="counter-btn add-btn" onclick="updateCount('${item}', 1)">+</button>
-                        </div>
-                        <div class="daily-count">
-                            Today: ${dailyCount} sold
-                        </div>
-                    </div>
-                `;
-                
-                container.innerHTML += itemHTML;
+    function updateSummary() {
+        const summaryContainer = document.getElementById('summaryContainer');
+        let totalMonthlySales = 0;
+        
+        const itemTotals = [];
+        clothingItems.forEach(function(item) {
+            const monthlyTotal = getMonthlyTotal(item);
+            totalMonthlySales += monthlyTotal;
+            itemTotals.push({
+                name: item,
+                total: monthlyTotal
             });
-        }
-
-        // Update count for an item
-        function updateCount(item, change) {
-            if (!salesData[currentDate]) {
-                salesData[currentDate] = {};
+        });
+        
+        itemTotals.sort(function(a, b) {
+            return b.total - a.total;
+        });
+        
+        let summaryHTML = '';
+        
+        itemTotals.forEach(function(itemData, index) {
+            let trophy = '';
+            if (index === 0 && itemData.total > 0) trophy = '👑 ';
+            else if (index === 1 && itemData.total > 0) trophy = '🥈 ';
+            else if (index === 2 && itemData.total > 0) trophy = '🥉 ';
+            
+            let style = '';
+            if (index === 0 && itemData.total > 0) {
+                style = 'background: linear-gradient(135deg, #FFF9E6, #FFF5D4); border: 2px solid #FFD700;';
+            } else if (index === 1 && itemData.total > 0) {
+                style = 'background: linear-gradient(135deg, #F8F8F8, #F0F0F0); border: 2px solid #C0C0C0;';
+            } else if (index === 2 && itemData.total > 0) {
+                style = 'background: linear-gradient(135deg, #FAF3EB, #F5E8D9); border: 2px solid #CD7F32;';
             }
             
-            if (!salesData[currentDate][item]) {
-                salesData[currentDate][item] = 0;
-            }
-            
-            const newCount = salesData[currentDate][item] + change;
-            salesData[currentDate][item] = Math.max(0, newCount); // Prevent negative numbers
-            
-            // Update display
-            document.getElementById(`count-${item}`).textContent = salesData[currentDate][item];
-            
-            // Update summary with new sorting
-            updateSummary();
-            
-            // Save data
-            saveData();
-        }
+            summaryHTML += '<div class="summary-item" style="' + style + '">' +
+                '<div class="summary-name">' + trophy + itemData.name + '</div>' +
+                '<div class="summary-count">' + itemData.total + '</div>' +
+                '</div>';
+        });
+        
+        summaryContainer.innerHTML = summaryHTML;
+        document.getElementById('totalSales').textContent = totalMonthlySales;
+    }
 
-        // Get daily count for an item
-        function getDailyCount(item, date) {
-            return salesData[date] && salesData[date][item] ? salesData[date][item] : 0;
-        }
-
-        // Calculate monthly total for an item
-        function getMonthlyTotal(item) {
-            const currentMonth = new Date().getMonth();
-            const currentYear = new Date().getFullYear();
-            let total = 0;
-            
-            for (const date in salesData) {
-                const dateObj = new Date(date);
-                if (dateObj.getMonth() === currentMonth && dateObj.getFullYear() === currentYear) {
-                    total += salesData[date][item] || 0;
-                }
-            }
-            
-            return total;
-        }
-
-        // Update summary section with descending order
-        function updateSummary() {
-            const summaryContainer = document.getElementById('summaryContainer');
-            let totalMonthlySales = 0;
-            
-            // Create an array with item names and their monthly totals
-            const itemTotals = clothingItems.map(item => {
-                const monthlyTotal = getMonthlyTotal(item);
-                totalMonthlySales += monthlyTotal;
-                return {
-                    name: item,
-                    total: monthlyTotal
-                };
-            });
-            
-            // Sort by total in descending order (highest first)
-            itemTotals.sort((a, b) => b.total - a.total);
-            
-            let summaryHTML = '';
-            
-            itemTotals.forEach((itemData, index) => {
-                // Add trophy emoji for top 3
-                let trophy = '';
-                if (index === 0 && itemData.total > 0) trophy = '👑 ';
-                else if (index === 1 && itemData.total > 0) trophy = '🥈 ';
-                else if (index === 2 && itemData.total > 0) trophy = '🥉 ';
-                
-                summaryHTML += `
-                    <div class="summary-item" style="
-                        ${index === 0 && itemData.total > 0 ? 'background: linear-gradient(135deg, #FFF9E6, #FFF5D4); border: 2px solid #FFD700;' : ''}
-                        ${index === 1 && itemData.total > 0 ? 'background: linear-gradient(135deg, #F8F8F8, #F0F0F0); border: 2px solid #C0C0C0;' : ''}
-                        ${index === 2 && itemData.total > 0 ? 'background: linear-gradient(135deg, #FAF3EB, #F5E8D9); border: 2px solid #CD7F32;' : ''}
-                    ">
-                        <div class="summary-name">${trophy}${itemData.name}</div>
-                        <div class="summary-count">${itemData.total}</div>
-                    </div>
-                `;
-            });
-            
-            summaryContainer.innerHTML = summaryHTML;
-            document.getElementById('totalSales').textContent = totalMonthlySales;
-        }
-
-        // Reset today's counts
-        function resetToday() {
-            if (confirm('Are you sure you want to reset all counts for today?')) {
-                if (salesData[currentDate]) {
-                    delete salesData[currentDate];
-                    saveData();
-                    renderItems();
-                    updateSummary();
-                }
+    function resetToday() {
+        if (confirm('Are you sure you want to reset all counts for today?')) {
+            if (salesData[currentDate]) {
+                delete salesData[currentDate];
+                saveData();
+                renderItems();
+                updateSummary();
             }
         }
+    }
 
-        // Export data as JSON
-        function exportData() {
-            if (Object.keys(salesData).length === 0) {
-                alert('No data to export yet! Start tracking sales first.');
-                return;
-            }
-            
-            const dataStr = JSON.stringify(salesData, null, 2);
-            const today = new Date().toISOString().split('T')[0];
-            const exportFileDefaultName = `chunkz-sales-${today}.json`;
-            
-            // Ask user which export method they prefer
-            const exportMethod = prompt(
-                'How to export?\n\n' +
-                '1. Download JSON file (for laptop)\n' +
-                '2. Copy data to clipboard (for phone)\n\n' +
-                'Enter 1 or 2:'
-            );
-            
-            if (exportMethod === '1') {
-                // Download as JSON file
-                const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-                const linkElement = document.createElement('a');
-                linkElement.setAttribute('href', dataUri);
-                linkElement.setAttribute('download', exportFileDefaultName);
-                document.body.appendChild(linkElement);
-                linkElement.click();
-                document.body.removeChild(linkElement);
-                alert('✅ File downloaded!\n\nTransfer this file to your other device.');
-                
-            } else if (exportMethod === '2') {
-                // Copy to clipboard
-                navigator.clipboard.writeText(dataStr).then(() => {
-                    alert('✅ Data copied to clipboard!\n\n' +
-                          'On your other device:\n' +
-                          '1. Click "Import Data"\n' +
-                          '2. Choose "Paste from clipboard"\n' +
-                          '3. Paste this data');
-                }).catch(err => {
-                    alert('❌ Could not copy to clipboard. Try downloading instead.');
-                });
-            } else if (exportMethod !== null) {
-                alert('Please enter 1 or 2');
-            }
+    // ===== EXPORT FUNCTION =====
+    function exportData() {
+        if (Object.keys(salesData).length === 0) {
+            alert('No data to export yet!');
+            return;
         }
+        
+        const dataStr = JSON.stringify(salesData, null, 2);
+        const today = new Date().toISOString().split('T')[0];
+        const filename = 'chunkz-sales-' + today + '.json';
+        
+        // Create download link
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        alert('✅ Data exported! Send the downloaded file to your laptop.');
+    }
 
-        // Import data function
-        function importData() {
-            const importMethod = prompt(
-                'How to import?\n\n' +
-                '1. Upload JSON file\n' +
-                '2. Paste from clipboard\n\n' +
-                'Enter 1 or 2:'
-            );
+    // ===== IMPORT FUNCTION =====
+    function importData() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        
+        input.onchange = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
             
-            if (importMethod === '1') {
-                importFromFile();
-            } else if (importMethod === '2') {
-                importFromClipboard();
-            } else if (importMethod !== null) {
-                alert('Please enter 1 or 2');
-            }
-        }
-
-        // Import from JSON file
-        function importFromFile() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json,application/json';
-            
-            input.onchange = function(event) {
-                const file = event.target.files[0];
-                if (!file) return;
-                
-                const reader = new FileReader();
-                
-                reader.onload = function(e) {
-                    try {
-                        const importedData = JSON.parse(e.target.result);
-                        
-                        // Ask how to merge
-                        const mergeMethod = confirm(
-                            'Merge data?\n\n' +
-                            'OK = Replace ALL existing data\n' +
-                            'Cancel = Merge (add together)'
-                        );
-                        
-                        if (mergeMethod) {
-                            // Replace all
-                            salesData = importedData;
-                            alert('✅ All data replaced!');
-                        } else {
-                            // Merge (add counts)
-                            for (const date in importedData) {
-                                if (!salesData[date]) {
-                                    salesData[date] = {};
-                                }
-                                for (const item in importedData[date]) {
-                                    salesData[date][item] = (salesData[date][item] || 0) + importedData[date][item];
-                                }
-                            }
-                            alert('✅ Data merged successfully!');
-                        }
-                        
-                        saveData();
-                        renderItems();
-                        updateSummary();
-                        
-                    } catch (error) {
-                        alert('❌ Error importing file. Make sure it\'s a valid JSON file.');
-                    }
-                };
-                
-                reader.readAsText(file);
-            };
-            
-            input.click();
-        }
-
-        // Import from clipboard
-        function importFromClipboard() {
-            navigator.clipboard.readText().then(text => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
                 try {
-                    const importedData = JSON.parse(text);
+                    const importedData = JSON.parse(e.target.result);
                     
-                    // Validate data structure
-                    if (typeof importedData !== 'object' || importedData === null) {
-                        throw new Error('Invalid data');
-                    }
-                    
-                    const mergeMethod = confirm(
-                        'Merge data?\n\n' +
-                        'OK = Replace ALL existing data\n' +
-                        'Cancel = Merge (add together)'
-                    );
-                    
-                    if (mergeMethod) {
-                        // Replace all
-                        salesData = importedData;
-                        alert('✅ All data replaced!');
-                    } else {
-                        // Merge (add counts)
+                    if (!confirm('Replace ALL existing data with imported data?')) {
+                        // Merge data instead of replacing
                         for (const date in importedData) {
                             if (!salesData[date]) {
                                 salesData[date] = {};
                             }
                             for (const item in importedData[date]) {
-                                salesData[date][item] = (salesData[date][item] || 0) + importedData[date][item];
+                                const current = salesData[date][item] || 0;
+                                salesData[date][item] = current + importedData[date][item];
                             }
                         }
                         alert('✅ Data merged successfully!');
+                    } else {
+                        // Replace all data
+                        salesData = importedData;
+                        alert('✅ All data replaced!');
                     }
                     
                     saveData();
@@ -799,29 +685,46 @@
                     updateSummary();
                     
                 } catch (error) {
-                    alert('❌ Invalid data in clipboard!\nMake sure you copied from the export function.');
+                    alert('Error importing file. Make sure it\'s a valid JSON file.');
                 }
-            }).catch(err => {
-                alert('❌ Could not read clipboard. Please check permissions.');
-            });
-        }
+            };
+            reader.readAsText(file);
+        };
+        
+        input.click();
+    }
 
-        // Keyboard shortcuts for quick counting
-        document.addEventListener('keydown', function(e) {
-            // Number keys 1-9 to quickly add items
-            if (e.key >= '1' && e.key <= '9') {
-                const index = parseInt(e.key) - 1;
-                if (index < clothingItems.length) {
-                    updateCount(clothingItems[index], 1);
-                }
+    // ===== KEYBOARD SHORTCUTS =====
+    document.addEventListener('keydown', function(e) {
+        // Number keys 1-9
+        if (e.key >= '1' && e.key <= '9') {
+            const index = parseInt(e.key) - 1;
+            if (index < clothingItems.length) {
+                updateCount(clothingItems[index], 1);
             }
+        }
+        
+        // Space bar
+        if (e.code === 'Space') {
+            e.preventDefault();
+            updateCount(clothingItems[0], 1);
+        }
+    });
+
+    // ===== INITIALIZATION =====
+    document.addEventListener('DOMContentLoaded', function() {
+        loadData();
+        initializeDatePicker();
+        renderItems();
+        updateSummary();
+    });
+</script>
+  
+      
+      
+
+  
             
-            // Space bar to add to first item
-            if (e.code === 'Space') {
-                e.preventDefault();
-                updateCount(clothingItems[0], 1);
-            }
-        });
     </script>
 </body>
 </html>
