@@ -272,7 +272,7 @@
             background: #f57c00;
         }
         
-        /* Export button style */
+        /* Button styles */
         .export-btn {
             background: #2196F3;
             color: white;
@@ -281,12 +281,26 @@
             border-radius: 8px;
             font-size: 1rem;
             cursor: pointer;
-            margin-left: 10px;
             transition: background 0.3s ease;
         }
         
         .export-btn:hover {
             background: #0b7dda;
+        }
+        
+        .import-btn {
+            background: #9C27B0;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        
+        .import-btn:hover {
+            background: #7B1FA2;
         }
         
         .button-group {
@@ -296,60 +310,58 @@
             flex-wrap: wrap;
         }
         
-       /* Header Styles */
-.header-top {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-    margin-bottom: 10px;
-    flex-wrap: wrap;
-}
-
-.logo {
-    height: 80px;
-    width: auto;
-    max-width: 120px;
-    border-radius: 8px;
-    object-fit: contain;
-}
-
-.title-container {
-    text-align: left;
-}
-
-.title-container h1 {
-    margin-bottom: 5px;
-    color: #333;
-    font-size: 2.2rem;
-}
-
-.subtitle {
-    color: #666;
-    font-size: 1.1rem;
-}
-
-@media (max-width: 768px) {
-    .header-top {
-        flex-direction: column;
-        text-align: center;
-        gap: 15px;
-    }
-    
-    .title-container {
-        text-align: center;
-    }
-    
-    .logo {
-        height: 70px;
-    }
-    
-    .title-container h1 {
-        font-size: 1.8rem;
-    }
-}
-
+        /* Logo and Title Container */
+        .logo-title-container {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding: 0 10px;
+        }
+        
+        /* Fully Rounded Logo */
+        .logo {
+            height: 80px;
+            width: 80px;
+            border-radius: 50%; /* Makes it fully rounded */
+            object-fit: cover;
+            border: 3px solid #667eea;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            flex-shrink: 0; /* Prevents logo from shrinking */
+        }
+        
+        .title-wrapper h1 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 1rem;
+        }
+        
+        /* Mobile styles - keeps logo beside h1 */
         @media (max-width: 768px) {
+            .logo-title-container {
+                gap: 15px;
+                flex-wrap: nowrap; /* Prevents wrapping to new line */
+            }
+            
+            .logo {
+                height: 60px;
+                width: 60px;
+            }
+            
+            .title-wrapper h1 {
+                font-size: 1.4rem;
+                line-height: 1.3;
+            }
+            
+            .subtitle {
+                font-size: 0.9rem;
+            }
+            
             .items-grid {
                 grid-template-columns: 1fr;
             }
@@ -370,19 +382,39 @@
                 width: 100%;
             }
         }
+        
+        /* Extra small screens */
+        @media (max-width: 480px) {
+            .logo-title-container {
+                gap: 12px;
+            }
+            
+            .logo {
+                height: 55px;
+                width: 55px;
+            }
+            
+            .title-wrapper h1 {
+                font-size: 1.2rem;
+            }
+            
+            .subtitle {
+                font-size: 0.85rem;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-       <header>
-    <div class="header-top">
-        <img src="CHUNKZLOGO.jpeg" alt="Chunkz-TheBrand Logo" class="logo">
-        <div class="title-container">
-            <h1>Chunkz-TheBrand Sales Tracker</h1>
-            <p class="subtitle">Track your daily sales across all clothing items</p>
-        </div>
-    </div>
-</header>
+        <header>
+            <div class="logo-title-container">
+                <img src="CHUNKZLOGO.jpeg" alt="Chunkz-TheBrand Logo" class="logo">
+                <div class="title-wrapper">
+                    <h1>Chunkz-TheBrand Sales Tracker</h1>
+                    <p class="subtitle">Track your daily sales across all clothing items</p>
+                </div>
+            </div>
+        </header>
         
         <div class="current-month">
             <span id="currentMonth">Loading...</span>
@@ -414,7 +446,8 @@
             
             <div class="button-group">
                 <button class="reset-btn" onclick="resetToday()">Reset Today's Counts</button>
-                <button class="export-btn" onclick="exportData()">Export All Data</button>
+                <button class="export-btn" onclick="exportData()">📤 Export All Data</button>
+                <button class="import-btn" onclick="importData()">📥 Import Data</button>
             </div>
         </div>
     </div>
@@ -611,25 +644,171 @@
         // Export data as JSON
         function exportData() {
             if (Object.keys(salesData).length === 0) {
-                alert('No data to export yet!');
+                alert('No data to export yet! Start tracking sales first.');
                 return;
             }
             
             const dataStr = JSON.stringify(salesData, null, 2);
-            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-            
             const today = new Date().toISOString().split('T')[0];
-            const exportFileDefaultName = `clothing-sales-${today}.json`;
+            const exportFileDefaultName = `chunkz-sales-${today}.json`;
             
-            const linkElement = document.createElement('a');
-            linkElement.setAttribute('href', dataUri);
-            linkElement.setAttribute('download', exportFileDefaultName);
-            linkElement.click();
+            // Ask user which export method they prefer
+            const exportMethod = prompt(
+                'How to export?\n\n' +
+                '1. Download JSON file (for laptop)\n' +
+                '2. Copy data to clipboard (for phone)\n\n' +
+                'Enter 1 or 2:'
+            );
+            
+            if (exportMethod === '1') {
+                // Download as JSON file
+                const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                document.body.appendChild(linkElement);
+                linkElement.click();
+                document.body.removeChild(linkElement);
+                alert('✅ File downloaded!\n\nTransfer this file to your other device.');
+                
+            } else if (exportMethod === '2') {
+                // Copy to clipboard
+                navigator.clipboard.writeText(dataStr).then(() => {
+                    alert('✅ Data copied to clipboard!\n\n' +
+                          'On your other device:\n' +
+                          '1. Click "Import Data"\n' +
+                          '2. Choose "Paste from clipboard"\n' +
+                          '3. Paste this data');
+                }).catch(err => {
+                    alert('❌ Could not copy to clipboard. Try downloading instead.');
+                });
+            } else if (exportMethod !== null) {
+                alert('Please enter 1 or 2');
+            }
         }
 
-        // Keyboard shortcuts for quick counting (optional)
+        // Import data function
+        function importData() {
+            const importMethod = prompt(
+                'How to import?\n\n' +
+                '1. Upload JSON file\n' +
+                '2. Paste from clipboard\n\n' +
+                'Enter 1 or 2:'
+            );
+            
+            if (importMethod === '1') {
+                importFromFile();
+            } else if (importMethod === '2') {
+                importFromClipboard();
+            } else if (importMethod !== null) {
+                alert('Please enter 1 or 2');
+            }
+        }
+
+        // Import from JSON file
+        function importFromFile() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json,application/json';
+            
+            input.onchange = function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+                        
+                        // Ask how to merge
+                        const mergeMethod = confirm(
+                            'Merge data?\n\n' +
+                            'OK = Replace ALL existing data\n' +
+                            'Cancel = Merge (add together)'
+                        );
+                        
+                        if (mergeMethod) {
+                            // Replace all
+                            salesData = importedData;
+                            alert('✅ All data replaced!');
+                        } else {
+                            // Merge (add counts)
+                            for (const date in importedData) {
+                                if (!salesData[date]) {
+                                    salesData[date] = {};
+                                }
+                                for (const item in importedData[date]) {
+                                    salesData[date][item] = (salesData[date][item] || 0) + importedData[date][item];
+                                }
+                            }
+                            alert('✅ Data merged successfully!');
+                        }
+                        
+                        saveData();
+                        renderItems();
+                        updateSummary();
+                        
+                    } catch (error) {
+                        alert('❌ Error importing file. Make sure it\'s a valid JSON file.');
+                    }
+                };
+                
+                reader.readAsText(file);
+            };
+            
+            input.click();
+        }
+
+        // Import from clipboard
+        function importFromClipboard() {
+            navigator.clipboard.readText().then(text => {
+                try {
+                    const importedData = JSON.parse(text);
+                    
+                    // Validate data structure
+                    if (typeof importedData !== 'object' || importedData === null) {
+                        throw new Error('Invalid data');
+                    }
+                    
+                    const mergeMethod = confirm(
+                        'Merge data?\n\n' +
+                        'OK = Replace ALL existing data\n' +
+                        'Cancel = Merge (add together)'
+                    );
+                    
+                    if (mergeMethod) {
+                        // Replace all
+                        salesData = importedData;
+                        alert('✅ All data replaced!');
+                    } else {
+                        // Merge (add counts)
+                        for (const date in importedData) {
+                            if (!salesData[date]) {
+                                salesData[date] = {};
+                            }
+                            for (const item in importedData[date]) {
+                                salesData[date][item] = (salesData[date][item] || 0) + importedData[date][item];
+                            }
+                        }
+                        alert('✅ Data merged successfully!');
+                    }
+                    
+                    saveData();
+                    renderItems();
+                    updateSummary();
+                    
+                } catch (error) {
+                    alert('❌ Invalid data in clipboard!\nMake sure you copied from the export function.');
+                }
+            }).catch(err => {
+                alert('❌ Could not read clipboard. Please check permissions.');
+            });
+        }
+
+        // Keyboard shortcuts for quick counting
         document.addEventListener('keydown', function(e) {
-            // Number keys 1-9 to quickly add items (in order they appear)
+            // Number keys 1-9 to quickly add items
             if (e.key >= '1' && e.key <= '9') {
                 const index = parseInt(e.key) - 1;
                 if (index < clothingItems.length) {
@@ -639,7 +818,7 @@
             
             // Space bar to add to first item
             if (e.code === 'Space') {
-                e.preventDefault(); // Prevent page scroll
+                e.preventDefault();
                 updateCount(clothingItems[0], 1);
             }
         });
