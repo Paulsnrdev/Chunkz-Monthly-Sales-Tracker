@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clothing Sales Tracker</title>
+    <title>Chunkz-TheBrand Sales Tracker</title>
     <style>
         * {
             margin: 0;
@@ -187,6 +187,45 @@
             padding: 15px;
             border-radius: 10px;
             box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .summary-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        /* Rank indicators for top 3 */
+        .summary-item::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: #666;
+        }
+        
+        .summary-item:nth-child(1)::before {
+            content: '#1';
+            color: #D4AF37;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .summary-item:nth-child(2)::before {
+            content: '#2';
+            color: #C0C0C0;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .summary-item:nth-child(3)::before {
+            content: '#3';
+            color: #CD7F32;
+            font-size: 0.8rem;
+            font-weight: bold;
         }
         
         .summary-name {
@@ -233,6 +272,83 @@
             background: #f57c00;
         }
         
+        /* Export button style */
+        .export-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: background 0.3s ease;
+        }
+        
+        .export-btn:hover {
+            background: #0b7dda;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+       /* Header Styles */
+.header-top {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.logo {
+    height: 80px;
+    width: auto;
+    max-width: 120px;
+    border-radius: 8px;
+    object-fit: contain;
+}
+
+.title-container {
+    text-align: left;
+}
+
+.title-container h1 {
+    margin-bottom: 5px;
+    color: #333;
+    font-size: 2.2rem;
+}
+
+.subtitle {
+    color: #666;
+    font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+    .header-top {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+    
+    .title-container {
+        text-align: center;
+    }
+    
+    .logo {
+        height: 70px;
+    }
+    
+    .title-container h1 {
+        font-size: 1.8rem;
+    }
+}
+
         @media (max-width: 768px) {
             .items-grid {
                 grid-template-columns: 1fr;
@@ -245,15 +361,28 @@
             h1 {
                 font-size: 2rem;
             }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .button-group button {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>👕 Clothing Sales Tracker</h1>
+       <header>
+    <div class="header-top">
+        <img src="CHUNKZLOGO.jpeg" alt="Chunkz-TheBrand Logo" class="logo">
+        <div class="title-container">
+            <h1>Chunkz-TheBrand Sales Tracker</h1>
             <p class="subtitle">Track your daily sales across all clothing items</p>
-        </header>
+        </div>
+    </div>
+</header>
         
         <div class="current-month">
             <span id="currentMonth">Loading...</span>
@@ -271,7 +400,8 @@
         </div>
         
         <div class="summary-section">
-            <h2>Monthly Summary</h2>
+            <h2>📊 Monthly Sales Ranking</h2>
+            <p style="color: #666; margin-bottom: 15px;">Items sorted from highest to lowest sales</p>
             <div class="summary-grid" id="summaryContainer">
                 <!-- Summary will be generated here -->
             </div>
@@ -282,7 +412,10 @@
                 <div>items</div>
             </div>
             
-            <button class="reset-btn" onclick="resetToday()">Reset Today's Counts</button>
+            <div class="button-group">
+                <button class="reset-btn" onclick="resetToday()">Reset Today's Counts</button>
+                <button class="export-btn" onclick="exportData()">Export All Data</button>
+            </div>
         </div>
     </div>
 
@@ -392,7 +525,7 @@
             // Update display
             document.getElementById(`count-${item}`).textContent = salesData[currentDate][item];
             
-            // Update summary
+            // Update summary with new sorting
             updateSummary();
             
             // Save data
@@ -420,21 +553,41 @@
             return total;
         }
 
-        // Update summary section
+        // Update summary section with descending order
         function updateSummary() {
             const summaryContainer = document.getElementById('summaryContainer');
             let totalMonthlySales = 0;
             
-            let summaryHTML = '';
-            
-            clothingItems.forEach(item => {
+            // Create an array with item names and their monthly totals
+            const itemTotals = clothingItems.map(item => {
                 const monthlyTotal = getMonthlyTotal(item);
                 totalMonthlySales += monthlyTotal;
+                return {
+                    name: item,
+                    total: monthlyTotal
+                };
+            });
+            
+            // Sort by total in descending order (highest first)
+            itemTotals.sort((a, b) => b.total - a.total);
+            
+            let summaryHTML = '';
+            
+            itemTotals.forEach((itemData, index) => {
+                // Add trophy emoji for top 3
+                let trophy = '';
+                if (index === 0 && itemData.total > 0) trophy = '👑 ';
+                else if (index === 1 && itemData.total > 0) trophy = '🥈 ';
+                else if (index === 2 && itemData.total > 0) trophy = '🥉 ';
                 
                 summaryHTML += `
-                    <div class="summary-item">
-                        <div class="summary-name">${item}</div>
-                        <div class="summary-count">${monthlyTotal}</div>
+                    <div class="summary-item" style="
+                        ${index === 0 && itemData.total > 0 ? 'background: linear-gradient(135deg, #FFF9E6, #FFF5D4); border: 2px solid #FFD700;' : ''}
+                        ${index === 1 && itemData.total > 0 ? 'background: linear-gradient(135deg, #F8F8F8, #F0F0F0); border: 2px solid #C0C0C0;' : ''}
+                        ${index === 2 && itemData.total > 0 ? 'background: linear-gradient(135deg, #FAF3EB, #F5E8D9); border: 2px solid #CD7F32;' : ''}
+                    ">
+                        <div class="summary-name">${trophy}${itemData.name}</div>
+                        <div class="summary-count">${itemData.total}</div>
                     </div>
                 `;
             });
@@ -457,10 +610,16 @@
 
         // Export data as JSON
         function exportData() {
+            if (Object.keys(salesData).length === 0) {
+                alert('No data to export yet!');
+                return;
+            }
+            
             const dataStr = JSON.stringify(salesData, null, 2);
             const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
             
-            const exportFileDefaultName = `sales-data-${currentDate}.json`;
+            const today = new Date().toISOString().split('T')[0];
+            const exportFileDefaultName = `clothing-sales-${today}.json`;
             
             const linkElement = document.createElement('a');
             linkElement.setAttribute('href', dataUri);
@@ -468,9 +627,21 @@
             linkElement.click();
         }
 
-        // Keyboard shortcuts
+        // Keyboard shortcuts for quick counting (optional)
         document.addEventListener('keydown', function(e) {
-            // Add shortcuts if needed
+            // Number keys 1-9 to quickly add items (in order they appear)
+            if (e.key >= '1' && e.key <= '9') {
+                const index = parseInt(e.key) - 1;
+                if (index < clothingItems.length) {
+                    updateCount(clothingItems[index], 1);
+                }
+            }
+            
+            // Space bar to add to first item
+            if (e.code === 'Space') {
+                e.preventDefault(); // Prevent page scroll
+                updateCount(clothingItems[0], 1);
+            }
         });
     </script>
 </body>
