@@ -455,404 +455,529 @@
     
   
       
-      <script>
-    // Define all clothing items
-    const clothingItems = [
-        'Sweatpant',
-        'Hoodie',
-        'Tanktop',
-        'Croptop',
-        'Tshirt',
-        'Socks',
-        'Trucker Hat',
-        'Sweatshirt',
-        'Polo',
-        'Short',
-        'Jorts/Cargo',
-        'Raglan Shirt'
-    ];
+          <script>
+        // Define all clothing items
+        const clothingItems = [
+            'Sweatpant',
+            'Hoodie',
+            'Tanktop',
+            'Croptop',
+            'Tshirt',
+            'Socks',
+            'Trucker Hat',
+            'Sweatshirt',
+            'Polo',
+            'Short',
+            'Jorts/Cargo',
+            'Raglan Shirt'
+        ];
 
-    // Initialize data structure
-    let salesData = {};
-    let currentDate = new Date().toISOString().split('T')[0];
+        // Initialize data structure
+        let salesData = {};
+        let currentDate = new Date().toISOString().split('T')[0];
 
-    // ============ CORE FUNCTIONS ============
-    function initializeDatePicker() {
-        const datePicker = document.getElementById('datePicker');
-        datePicker.value = currentDate;
-        datePicker.max = currentDate;
-        
-        datePicker.addEventListener('change', function() {
-            currentDate = this.value;
-            updateCurrentDateDisplay();
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+            initializeDatePicker();
             renderItems();
+            updateSummary();
         });
-        
-        updateCurrentDateDisplay();
-    }
 
-    function updateCurrentDateDisplay() {
-        const date = new Date(currentDate);
-        const options = { year: 'numeric', month: 'long', day: 'numeric' };
-        document.getElementById('currentMonth').textContent = 
-            `Tracking Sales for ${date.toLocaleDateString('en-US', options)}`;
-    }
-
-    function loadData() {
-        const savedData = localStorage.getItem('clothingSalesData');
-        if (savedData) {
-            salesData = JSON.parse(savedData);
-        }
-    }
-
-    function saveData() {
-        localStorage.setItem('clothingSalesData', JSON.stringify(salesData));
-    }
-
-    function renderItems() {
-        const container = document.getElementById('itemsContainer');
-        container.innerHTML = '';
-        
-        clothingItems.forEach(item => {
-            const dailyCount = getDailyCount(item, currentDate);
+        // Initialize date picker
+        function initializeDatePicker() {
+            const datePicker = document.getElementById('datePicker');
+            datePicker.value = currentDate;
+            datePicker.max = currentDate; // Don't allow future dates
             
-            const itemHTML = `
-                <div class="item-card">
-                    <div class="item-name">${item}</div>
-                    <div class="item-controls">
-                        <button class="counter-btn remove-btn" onclick="updateCount('${item}', -1)">−</button>
-                        <div class="count-display" id="count-${item}">${dailyCount}</div>
-                        <button class="counter-btn add-btn" onclick="updateCount('${item}', 1)">+</button>
-                    </div>
-                    <div class="daily-count">
-                        Today: ${dailyCount} sold
-                    </div>
-                </div>
-            `;
-            
-            container.innerHTML += itemHTML;
-        });
-    }
-
-    function updateCount(item, change) {
-        if (!salesData[currentDate]) {
-            salesData[currentDate] = {};
-        }
-        
-        if (!salesData[currentDate][item]) {
-            salesData[currentDate][item] = 0;
-        }
-        
-        const newCount = salesData[currentDate][item] + change;
-        salesData[currentDate][item] = Math.max(0, newCount);
-        
-        document.getElementById(`count-${item}`).textContent = salesData[currentDate][item];
-        updateSummary();
-        saveData();
-    }
-
-    function getDailyCount(item, date) {
-        return salesData[date] && salesData[date][item] ? salesData[date][item] : 0;
-    }
-
-    function getMonthlyTotal(item) {
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
-        let total = 0;
-        
-        for (const date in salesData) {
-            const dateObj = new Date(date);
-            if (dateObj.getMonth() === currentMonth && dateObj.getFullYear() === currentYear) {
-                total += salesData[date][item] || 0;
-            }
-        }
-        
-        return total;
-    }
-
-    function updateSummary() {
-        const summaryContainer = document.getElementById('summaryContainer');
-        let totalMonthlySales = 0;
-        
-        const itemTotals = clothingItems.map(item => {
-            const monthlyTotal = getMonthlyTotal(item);
-            totalMonthlySales += monthlyTotal;
-            return {
-                name: item,
-                total: monthlyTotal
-            };
-        });
-        
-        itemTotals.sort((a, b) => b.total - a.total);
-        
-        let summaryHTML = '';
-        
-        itemTotals.forEach((itemData, index) => {
-            let trophy = '';
-            if (index === 0 && itemData.total > 0) trophy = '👑 ';
-            else if (index === 1 && itemData.total > 0) trophy = '🥈 ';
-            else if (index === 2 && itemData.total > 0) trophy = '🥉 ';
-            
-            summaryHTML += `
-                <div class="summary-item" style="
-                    ${index === 0 && itemData.total > 0 ? 'background: linear-gradient(135deg, #FFF9E6, #FFF5D4); border: 2px solid #FFD700;' : ''}
-                    ${index === 1 && itemData.total > 0 ? 'background: linear-gradient(135deg, #F8F8F8, #F0F0F0); border: 2px solid #C0C0C0;' : ''}
-                    ${index === 2 && itemData.total > 0 ? 'background: linear-gradient(135deg, #FAF3EB, #F5E8D9); border: 2px solid #CD7F32;' : ''}
-                ">
-                    <div class="summary-name">${trophy}${itemData.name}</div>
-                    <div class="summary-count">${itemData.total}</div>
-                </div>
-            `;
-        });
-        
-        summaryContainer.innerHTML = summaryHTML;
-        document.getElementById('totalSales').textContent = totalMonthlySales;
-    }
-
-    function resetToday() {
-        if (confirm('Are you sure you want to reset all counts for today?')) {
-            if (salesData[currentDate]) {
-                delete salesData[currentDate];
-                saveData();
+            datePicker.addEventListener('change', function() {
+                currentDate = this.value;
+                updateCurrentDateDisplay();
                 renderItems();
-                updateSummary();
+            });
+            
+            updateCurrentDateDisplay();
+        }
+
+        function updateCurrentDateDisplay() {
+            const date = new Date(currentDate);
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('currentMonth').textContent = 
+                `Tracking Sales for ${date.toLocaleDateString('en-US', options)}`;
+        }
+
+        // Load data from localStorage
+        function loadData() {
+            const savedData = localStorage.getItem('clothingSalesData');
+            if (savedData) {
+                salesData = JSON.parse(savedData);
             }
         }
-    }
 
-    // ============ EXPORT/IMPORT FUNCTIONS ============
-    function exportData() {
-        if (Object.keys(salesData).length === 0) {
-            alert('No data to export yet!');
-            return;
+        // Save data to localStorage
+        function saveData() {
+            localStorage.setItem('clothingSalesData', JSON.stringify(salesData));
         }
-        
-        // Create JSON data
-        const dataStr = JSON.stringify(salesData, null, 2);
-        const today = new Date().toISOString().split('T')[0];
-        const filename = `chunkz-sales-${today}.json`;
-        
-        // Show simple export options
-        const choice = confirm(
-            'Choose export method:\n\n' +
-            'OK = Download JSON file\n' +
-            'Cancel = Show data to copy manually'
-        );
-        
-        if (choice) {
-            // Download file
-            const blob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            a.click();
-            URL.revokeObjectURL(url);
-            alert('✅ File downloaded! Send it to your other device.');
-        } else {
-            // Show data for manual copying
-            showDataForCopying(dataStr);
-        }
-    }
 
-    function showDataForCopying(dataStr) {
-        const popup = document.createElement('div');
-        popup.style.cssText = `
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            padding: 20px;
-        `;
-        
-        popup.innerHTML = `
-            <div style="
-                background: white;
-                padding: 20px;
-                border-radius: 10px;
-                max-width: 90%;
-                max-height: 80vh;
-                overflow: auto;
-            ">
-                <h3 style="color: #333; margin-bottom: 15px;">📋 Copy This Data</h3>
-                <textarea id="dataToCopy" style="
-                    width: 100%;
-                    height: 200px;
-                    padding: 10px;
-                    border: 2px solid #ddd;
-                    border-radius: 5px;
-                    font-family: monospace;
-                    margin-bottom: 15px;
-                ">${dataStr}</textarea>
-                <div style="display: flex; gap: 10px;">
-                    <button onclick="copyData()" style="
-                        background: #4CAF50;
-                        color: white;
-                        border: none;
-                        padding: 10px 20px;
-                        border-radius: 5px;
-                        cursor: pointer;
-                    ">Copy to Clipboard</button>
-                    <button onclick="this.parentElement.parentElement.parentElement.remove()" style="
-                        background: #f44336;
-                        color: white;
-                        border: none;
-                        padding: 10px 20px;
-                        border-radius: 5px;
-                        cursor: pointer;
-                    ">Close</button>
-                </div>
-                <p style="margin-top: 10px; color: #666; font-size: 14px;">
-                    Send this data to your other device, then use Import.
-                </p>
-            </div>
-        `;
-        
-        document.body.appendChild(popup);
-        
-        // Select all text for easy copying
-        setTimeout(() => {
-            const textarea = document.getElementById('dataToCopy');
-            textarea.select();
-        }, 100);
-    }
-
-    function copyData() {
-        const textarea = document.getElementById('dataToCopy');
-        textarea.select();
-        document.execCommand('copy');
-        alert('✅ Data copied! Now paste it on your other device.');
-    }
-
-    function importData() {
-        const choice = confirm(
-            'Choose import method:\n\n' +
-            'OK = Upload JSON file\n' +
-            'Cancel = Paste data manually'
-        );
-        
-        if (choice) {
-            importFromFile();
-        } else {
-            importFromText();
-        }
-    }
-
-    function importFromFile() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        
-        input.onchange = function(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+        // Render all items
+        function renderItems() {
+            const container = document.getElementById('itemsContainer');
+            container.innerHTML = '';
             
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const importedData = JSON.parse(e.target.result);
-                    
-                    const replace = confirm(
-                        'Replace ALL existing data?\n\n' +
-                        'OK = Replace All\n' +
-                        'Cancel = Merge (add counts together)'
-                    );
-                    
-                    if (replace) {
-                        salesData = importedData;
-                        alert('✅ All data replaced!');
-                    } else {
-                        // Merge data
-                        for (const date in importedData) {
-                            if (!salesData[date]) salesData[date] = {};
-                            for (const item in importedData[date]) {
-                                const current = salesData[date][item] || 0;
-                                salesData[date][item] = current + importedData[date][item];
-                            }
-                        }
-                        alert('✅ Data merged successfully!');
-                    }
-                    
+            clothingItems.forEach(item => {
+                const dailyCount = getDailyCount(item, currentDate);
+                
+                const itemHTML = `
+                    <div class="item-card">
+                        <div class="item-name">${item}</div>
+                        <div class="item-controls">
+                            <button class="counter-btn remove-btn" onclick="updateCount('${item}', -1)">−</button>
+                            <div class="count-display" id="count-${item}">${dailyCount}</div>
+                            <button class="counter-btn add-btn" onclick="updateCount('${item}', 1)">+</button>
+                        </div>
+                        <div class="daily-count">
+                            Today: ${dailyCount} sold
+                        </div>
+                    </div>
+                `;
+                
+                container.innerHTML += itemHTML;
+            });
+        }
+
+        // Update count for an item
+        function updateCount(item, change) {
+            if (!salesData[currentDate]) {
+                salesData[currentDate] = {};
+            }
+            
+            if (!salesData[currentDate][item]) {
+                salesData[currentDate][item] = 0;
+            }
+            
+            const newCount = salesData[currentDate][item] + change;
+            salesData[currentDate][item] = Math.max(0, newCount); // Prevent negative numbers
+            
+            // Update display
+            document.getElementById(`count-${item}`).textContent = salesData[currentDate][item];
+            
+            // Update summary with new sorting
+            updateSummary();
+            
+            // Save data
+            saveData();
+        }
+
+        // Get daily count for an item
+        function getDailyCount(item, date) {
+            return salesData[date] && salesData[date][item] ? salesData[date][item] : 0;
+        }
+
+        // Calculate monthly total for an item
+        function getMonthlyTotal(item) {
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+            let total = 0;
+            
+            for (const date in salesData) {
+                const dateObj = new Date(date);
+                if (dateObj.getMonth() === currentMonth && dateObj.getFullYear() === currentYear) {
+                    total += salesData[date][item] || 0;
+                }
+            }
+            
+            return total;
+        }
+
+        // Update summary section with descending order
+        function updateSummary() {
+            const summaryContainer = document.getElementById('summaryContainer');
+            let totalMonthlySales = 0;
+            
+            // Create an array with item names and their monthly totals
+            const itemTotals = clothingItems.map(item => {
+                const monthlyTotal = getMonthlyTotal(item);
+                totalMonthlySales += monthlyTotal;
+                return {
+                    name: item,
+                    total: monthlyTotal
+                };
+            });
+            
+            // Sort by total in descending order (highest first)
+            itemTotals.sort((a, b) => b.total - a.total);
+            
+            let summaryHTML = '';
+            
+            itemTotals.forEach((itemData, index) => {
+                // Add trophy emoji for top 3
+                let trophy = '';
+                if (index === 0 && itemData.total > 0) trophy = '👑 ';
+                else if (index === 1 && itemData.total > 0) trophy = '🥈 ';
+                else if (index === 2 && itemData.total > 0) trophy = '🥉 ';
+                
+                summaryHTML += `
+                    <div class="summary-item" style="
+                        ${index === 0 && itemData.total > 0 ? 'background: linear-gradient(135deg, #FFF9E6, #FFF5D4); border: 2px solid #FFD700;' : ''}
+                        ${index === 1 && itemData.total > 0 ? 'background: linear-gradient(135deg, #F8F8F8, #F0F0F0); border: 2px solid #C0C0C0;' : ''}
+                        ${index === 2 && itemData.total > 0 ? 'background: linear-gradient(135deg, #FAF3EB, #F5E8D9); border: 2px solid #CD7F32;' : ''}
+                    ">
+                        <div class="summary-name">${trophy}${itemData.name}</div>
+                        <div class="summary-count">${itemData.total}</div>
+                    </div>
+                `;
+            });
+            
+            summaryContainer.innerHTML = summaryHTML;
+            document.getElementById('totalSales').textContent = totalMonthlySales;
+        }
+
+        // Reset today's counts
+        function resetToday() {
+            if (confirm('Are you sure you want to reset all counts for today?')) {
+                if (salesData[currentDate]) {
+                    delete salesData[currentDate];
                     saveData();
                     renderItems();
                     updateSummary();
-                    
-                } catch (error) {
-                    alert('❌ Error importing file. Make sure it\'s a valid JSON file.');
                 }
-            };
-            reader.readAsText(file);
-        };
-        
-        input.click();
-    }
+            }
+        }
 
-    function importFromText() {
-        const data = prompt('Paste the data from your other device:');
-        if (!data) return;
-        
-        try {
-            const importedData = JSON.parse(data.trim());
+        // =============================================
+        // SIMPLE EXPORT/IMPORT - FOOLPROOF VERSION
+        // =============================================
+
+        function exportData() {
+            if (Object.keys(salesData).length === 0) {
+                alert('No data to export yet!');
+                return;
+            }
             
-            const replace = confirm(
-                'Replace ALL existing data?\n\n' +
-                'OK = Replace All\n' +
-                'Cancel = Merge (add counts together)'
+            // Create a simple text representation
+            let exportText = "=== CHUNKZ SALES DATA ===\n";
+            exportText += `Exported: ${new Date().toLocaleString()}\n\n`;
+            
+            // Add all sales data
+            const dates = Object.keys(salesData).sort();
+            dates.forEach(date => {
+                exportText += `📅 ${date}:\n`;
+                let hasSales = false;
+                
+                clothingItems.forEach(item => {
+                    const count = salesData[date][item] || 0;
+                    if (count > 0) {
+                        exportText += `  • ${item}: ${count} sold\n`;
+                        hasSales = true;
+                    }
+                });
+                
+                if (!hasSales) {
+                    exportText += `  No sales recorded\n`;
+                }
+                exportText += "\n";
+            });
+            
+            // Monthly totals
+            exportText += "📊 MONTHLY TOTALS:\n";
+            const itemTotals = clothingItems.map(item => ({
+                name: item,
+                total: getMonthlyTotal(item)
+            })).sort((a, b) => b.total - a.total);
+            
+            itemTotals.forEach(item => {
+                if (item.total > 0) {
+                    exportText += `  • ${item.name}: ${item.total}\n`;
+                }
+            });
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(exportText).then(() => {
+                // Show the data in a popup for manual copying
+                showExportPopup(exportText);
+            }).catch(err => {
+                // Fallback: show data in popup
+                showExportPopup(exportText);
+            });
+        }
+
+        function showExportPopup(dataText) {
+            const popup = document.createElement('div');
+            popup.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.9);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                padding: 20px;
+                color: white;
+            `;
+            
+            popup.innerHTML = `
+                <div style="
+                    background: white;
+                    color: #333;
+                    padding: 25px;
+                    border-radius: 15px;
+                    max-width: 90%;
+                    max-height: 80vh;
+                    overflow-y: auto;
+                    font-family: monospace;
+                    white-space: pre-wrap;
+                    word-wrap: break-word;
+                    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+                ">
+                    <h3 style="color: #667eea; margin-bottom: 15px;">📤 COPY THIS DATA</h3>
+                    <div style="
+                        background: #f8f9fa;
+                        padding: 15px;
+                        border-radius: 8px;
+                        border: 2px solid #ddd;
+                        margin-bottom: 20px;
+                        font-size: 14px;
+                        line-height: 1.5;
+                        max-height: 300px;
+                        overflow-y: auto;
+                    ">${dataText.replace(/\n/g, '<br>')}</div>
+                    
+                    <p style="color: #666; margin-bottom: 20px; font-size: 14px;">
+                        <strong>📱 ON PHONE:</strong> Select and copy ALL text above<br>
+                        <strong>💻 ON LAPTOP:</strong> Paste into the import box
+                    </p>
+                    
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button onclick="copyToClipboardManually('${dataText.replace(/\n/g, '\\n').replace(/'/g, "\\'")}')" 
+                                style="background: #4CAF50; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer;">
+                            📋 Copy to Clipboard
+                        </button>
+                        <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                                style="background: #f44336; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer;">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(popup);
+        }
+
+        function copyToClipboardManually(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            alert('✅ Copied to clipboard!');
+        }
+
+        function importData() {
+            const importMethod = prompt(
+                'How to import?\n\n' +
+                '1. Enter/Edit data manually\n' +
+                '2. Import from JSON (advanced)\n\n' +
+                'Enter 1 or 2:'
             );
             
-            if (replace) {
-                salesData = importedData;
-                alert('✅ All data replaced!');
-            } else {
-                // Merge data
-                for (const date in importedData) {
-                    if (!salesData[date]) salesData[date] = {};
-                    for (const item in importedData[date]) {
-                        const current = salesData[date][item] || 0;
-                        salesData[date][item] = current + importedData[date][item];
+            if (importMethod === '1') {
+                showManualImport();
+            } else if (importMethod === '2') {
+                importFromJSONFile();
+            }
+        }
+
+        function showManualImport() {
+            const popup = document.createElement('div');
+            popup.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.9);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                padding: 20px;
+            `;
+            
+            popup.innerHTML = `
+                <div style="
+                    background: white;
+                    padding: 25px;
+                    border-radius: 15px;
+                    max-width: 600px;
+                    width: 90%;
+                ">
+                    <h3 style="color: #667eea; margin-bottom: 15px;">📥 PASTE DATA FROM PHONE</h3>
+                    <p style="color: #666; margin-bottom: 15px;">
+                        Paste the data you copied from your phone:
+                    </p>
+                    
+                    <textarea id="importTextarea" 
+                        style="
+                            width: 100%;
+                            height: 200px;
+                            padding: 15px;
+                            border: 2px solid #ddd;
+                            border-radius: 8px;
+                            font-family: monospace;
+                            font-size: 14px;
+                            resize: vertical;
+                            margin-bottom: 20px;
+                        "
+                        placeholder="Paste your sales data here..."></textarea>
+                    
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button onclick="processImportedText()" 
+                                style="background: #4CAF50; color: white; border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                            ✅ Import Data
+                        </button>
+                        <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                                style="background: #f44336; color: white; border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer;">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(popup);
+            document.getElementById('importTextarea').focus();
+        }
+
+        function processImportedText() {
+            const textarea = document.getElementById('importTextarea');
+            const text = textarea.value.trim();
+            
+            if (!text) {
+                alert('Please paste some data first!');
+                return;
+            }
+            
+            try {
+                // Try to parse as JSON first
+                if (text.startsWith('{') || text.startsWith('[')) {
+                    const importedData = JSON.parse(text);
+                    
+                    if (typeof importedData === 'object') {
+                        // Ask how to merge
+                        const replaceAll = confirm(
+                            'Replace ALL existing data with imported data?\n\n' +
+                            'OK = Replace All\n' +
+                            'Cancel = Merge (add together)'
+                        );
+                        
+                        if (replaceAll) {
+                            salesData = importedData;
+                            alert('✅ All data replaced!');
+                        } else {
+                            // Merge data
+                            for (const date in importedData) {
+                                if (!salesData[date]) salesData[date] = {};
+                                for (const item in importedData[date]) {
+                                    const current = salesData[date][item] || 0;
+                                    salesData[date][item] = current + importedData[date][item];
+                                }
+                            }
+                            alert('✅ Data merged successfully!');
+                        }
                     }
+                } else {
+                    alert('⚠️ This doesn\'t look like JSON data. Please use the export function on your phone.');
+                    return;
                 }
-                alert('✅ Data merged successfully!');
-            }
-            
-            saveData();
-            renderItems();
-            updateSummary();
-            
-        } catch (error) {
-            alert('❌ Invalid data format! Make sure you copied the complete JSON data.');
-        }
-    }
-
-    // ============ KEYBOARD SHORTCUTS ============
-    document.addEventListener('keydown', function(e) {
-        // Number keys 1-9
-        if (e.key >= '1' && e.key <= '9') {
-            const index = parseInt(e.key) - 1;
-            if (index < clothingItems.length) {
-                updateCount(clothingItems[index], 1);
+                
+                // Save and refresh
+                saveData();
+                renderItems();
+                updateSummary();
+                
+                // Close popup
+                document.querySelector('div[style*="position: fixed"]').remove();
+                
+            } catch (error) {
+                alert('❌ Error importing data!\n\n' +
+                      'Make sure:\n' +
+                      '1. You copied ALL the data from your phone\n' +
+                      '2. You used the Export button on your phone\n' +
+                      '3. The data format is correct');
+                console.error('Import error:', error);
             }
         }
-        
-        // Space bar
-        if (e.code === 'Space') {
-            e.preventDefault();
-            updateCount(clothingItems[0], 1);
-        }
-    });
 
-    // ============ INITIALIZATION ============
-    document.addEventListener('DOMContentLoaded', function() {
-        loadData();
-        initializeDatePicker();
-        renderItems();
-        updateSummary();
-    });
-</script>
+        function importFromJSONFile() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+                        
+                        const replaceAll = confirm(
+                            'Replace ALL existing data with imported data?\n\n' +
+                            'OK = Replace All\n' +
+                            'Cancel = Merge (add together)'
+                        );
+                        
+                        if (replaceAll) {
+                            salesData = importedData;
+                            alert('✅ All data replaced!');
+                        } else {
+                            for (const date in importedData) {
+                                if (!salesData[date]) salesData[date] = {};
+                                for (const item in importedData[date]) {
+                                    const current = salesData[date][item] || 0;
+                                    salesData[date][item] = current + importedData[date][item];
+                                }
+                            }
+                            alert('✅ Data merged successfully!');
+                        }
+                        
+                        saveData();
+                        renderItems();
+                        updateSummary();
+                        
+                    } catch (error) {
+                        alert('Error importing file. Make sure it\'s a valid JSON file from the export function.');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            
+            input.click();
+        }
+
+        // Keyboard shortcuts for quick counting
+        document.addEventListener('keydown', function(e) {
+            // Number keys 1-9 to quickly add items
+            if (e.key >= '1' && e.key <= '9') {
+                const index = parseInt(e.key) - 1;
+                if (index < clothingItems.length) {
+                    updateCount(clothingItems[index], 1);
+                }
+            }
+            
+            // Space bar to add to first item
+            if (e.code === 'Space') {
+                e.preventDefault();
+                updateCount(clothingItems[0], 1);
+            }
+        });
+    </script>
 
   
             
